@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="X-UA-Compatible" content="ie=edge">
+  <title>Document</title>
+  <link rel="stylesheet" href="./assets/css/global.css">
+  <link rel="stylesheet" href="./assets/fonts/iconfont.css">
+</head>
+<body>
+  <div id="app">
+    <div class="my-header">
+        <span>电影列表</span>
+      </div> 
+      <div class="wrapper">
+        <ul class="list">
+          <li v-for="item in list" :key="item.id">
+            <a href="./item.html">
+              <img src="https://images.weserv.nl/?url=http://img3.doubanio.com/view/photo/s_ratio_poster/public/p2566598269.jpg">
+              <div class="info">
+                <h3>徒手攀岩</h3>
+                <p>豆瓣评分：9</p>
+                <p><span class="tag">纪录片</span></p>
+              </div>
+            </a>
+          </li>
+        </ul>
+      </div>
+      <div class="my-footer">
+        <ul>
+          <li>
+            <a>
+              <span class="iconfont icon-remen"></span>
+              <p>正在热映</p>
+            </a>
+          </li>
+          <li>
+            <a>
+              <span class="iconfont icon-dianying"></span>
+              <p>即将上映</p>
+            </a>
+          </li>
+          <li>
+            <a>
+              <span class="iconfont icon-top"></span>
+              <p>top250</p>
+            </a>
+          </li>
+        </ul>
+      </div>
+  </div>
+</body>
+</html>

@@ -369,9 +369,15 @@ import './styles/fonts/iconfont.css'
 > 首先封装 头部组件 layout-header.vue  和底部组件 layout-footer.vue, 并在App.vue中使用
 
 ```vue
+<!-- app.vue是根组件 -->
   <div id="app">
+    <!-- 头部组件 -->
     <LayoutHeader />
-    <router-view/>
+    <div class="wrapper">
+        <!-- 一级路由容器 -->
+       <router-view />
+    </div>
+    <!-- 尾部组件 -->
     <LayoutFooter />
   </div>
 ```
@@ -385,15 +391,30 @@ import './styles/fonts/iconfont.css'
 
 > 路由规则如下
 
+路由级组件一般放置在 views(pages)
+
 ```js
-// 路由规则
-  routes: [
-    { path: '/', redirect: '/hot' },
-    { path: '/hot', component: Hot },
-    { path: '/movie', component: Movie },
-    { path: '/top', component: Top },
-    { path: '/detail', component: Detail }
-  ]
+const routes = [
+  {
+    path: '/',
+    redirect: '/hot' // 强制跳转到正在热映
+  },
+  {
+    path: '/hot', // 正在热映
+    component: () => import('@/views/hot')
+  },
+  {
+    path: '/movie', // 即将上映
+    component: () => import('@/views/movie')
+  }, {
+    path: '/top', // top250榜单
+    component: () => import('@/views/top')
+  },
+  {
+    path: '/detail', // 豆瓣影片详情
+    component: () => import('@/views/detail')
+  }
+]
 ```
 
 > 封装一个公共的list组件 movie-list  内部放置豆瓣列表
@@ -428,58 +449,65 @@ export default {
 
 ```
 
-> 修改底部的导航
+> 修改底部的导航, 适配 路由地址
 
 ```vue
-<div class="my-footer">
-        <ul>
-          <router-link to='/hot' tag="li">
-            <a>
-              <span class="iconfont icon-remen"></span>
-              <p>正在热映</p>
-            </a>
-          </router-link>
-          <router-link to='/movie' tag="li">
-            <a>
-              <span class="iconfont icon-dianying"></span>
-              <p>即将上映</p>
-            </a>
-          </router-link>
-          <router-link to="/top" tag="li">
-            <a>
-              <span class="iconfont icon-top"></span>
-              <p>top250</p>
-            </a>
-          </router-link>
-        </ul>
-      </div>
+ <div class="my-footer">
+    <ul>
+      <!-- 跳转可以用router-link router-link默认生成的是a标签 -->
+      <!-- 怎么改变router-link的标签呢 ? -->
+      <router-link tag="li" to="/hot">
+        <a>
+          <span class="iconfont icon-remen"></span>
+          <p>正在热映</p>
+        </a>
+      </router-link>
+      <router-link tag="li" to="/movie">
+        <a>
+          <span class="iconfont icon-dianying"></span>
+          <p>即将上映</p>
+        </a>
+      </router-link>
+      <router-link tag="li" to="/top">
+        <a>
+          <span class="iconfont icon-top"></span>
+          <p>top250</p>
+        </a>
+      </router-link>
+    </ul>
+  </div>
 ```
 
 ## vuex案例-电影列表功能
 
 第一步：声明数据，根据页面需要的数据进行声明。=> vuex => state
 
+我们把电影列表数据作为一个 共享的状态数据来对待
+
 * state
 *  mutations
 * actions
 
 ```js
-  state: {
-    title: '',
-    list: []
+state: {
+    // 存放公共数据的地方
+    title: '', // 当前的标题
+    list: [] // 当前的电影列表
   },
 ```
 
 第二步：定义修改数据的方法
 
 ```js
-        mutations: {
-            // 更新state必须通过 mutations
-            updateListAndTitle (state, payload) {
-                state.title = payload.title
-                state.list  = payload.list
-            }
-        },
+  mutations: {
+    // 用来更新 state中的title和list
+    // state是当前的状态对象  payload 提交mutations传过来的参数
+    updateListAndTitle (state, payload) {
+      // 直接对state的数据进行赋值即可
+      state.title = payload.title // payload想是什么是什么
+      state.list = payload.list // 接收载荷中的list
+    }
+  }
 ```
 
 第三步：获取数据的方法
@@ -493,40 +521,39 @@ export default {
   > 异步获取数据 需要用action
 
 ```js
-    actions: { 
-        // 从豆瓣获取数据  接口  jsonp
-        // 豆瓣接口 后台未设置支持跨域  但是 支持jsonp
-        // jsonp插件  context => store实例  从第二个参数开始就是 传递的参数
-        getListFromDouBan (context, type) {
-            // jsonp('http://api.douban.com/v2/movie/' + type)
-            jsonp(`http://api.douban.com/v2/movie/${type}?apikey=0df993c66c0c636e29ecbb5344252a4a`,function(error ,data){
-                if(error) return;
-                // 正常逻辑
-               // console.log(data)
-                context.commit('updateListAndTitle', {title: data.title, list: data.subjects  })
-            })
-        }
+  // action可以做异步请求
+  actions: {
+    // action中的第一个是store
+    getList (store, type) {
+      //  请求豆瓣的数据
+      // jsonp(url, opt(可选), callback)
+      // 将这个请求变成活的
+      // hot  /movie / top250 接口地址 除了 类型 返回结果全一样
+      jsonp(`http://api.douban.com/v2/movie/${type}?apikey=0df993c66c0c636e29ecbb5344252a4a`, function (err, data) {
+        if (err) return false // 如果err存在表示出问题了 出篓子了不能继续了
+        console.log(data)
+        // 如果你action中的数据想要改state 必须通过mutations
+        store.commit('updateListAndTitle', {
+          title: data.title,
+          list: data.subjects
+        })
+      })
     }
+  }
 ```
 
 第四步：调用获取数据的方法
 
 ```js
-  methods: {
-    ...mapActions(['getListFromDouBan'])  // methods定义了 getListFromDouBan => dispatch.getListFromDouBan
+export default {
+  created () {
+    // 尝试调用 action方法
+    this.$store.dispatch('getList', 'in_theaters') // 调用action的方法
   }
 }
 ```
 
-```js
-  created(){
-    // 一进入页面就开始调用获取数据的方法
-    // this.$store.dispatch('getListFromDouBan')
-    this.getListFromDouBan('in_theaters')
-  },
-```
-
-第五步：获取vuex的数据
+第五步：获取vuex的数据 在公共组件 mover-list中
 
 ```js
 computed: {
@@ -539,19 +566,19 @@ computed: {
 ![1568002303690](docs/media/1568002303690.png)
 
 ```html
-<ul class="list">
-    <li v-for="item in list" :key="item.id">
-      <a href="#">
-        <img
-          :src="'https://images.weserv.nl?url='+item.images.small">
-        <div class="info">
-          <h3>{{item.title}}</h3>
-          <p>豆瓣评分：{{item.rating.average}}</p>
-          <p><span v-for="(item,i) in item.genres" :key="i" class="tag">{{item}}</span></p>
-        </div>
-      </a>
-    </li>
-  </ul>
+  <ul class="list">
+          <li v-for="item in list" :key="item.id">
+            <a href="./item.html">
+            <!-- 这里用了图片的代理服务器  因为豆瓣的图片禁止在非豆瓣域名下展示 -->
+              <img :src="`https://images.weserv.nl/?url=${item.images.small}`">
+              <div class="info">
+                <h3>{{ item.title }}</h3>
+                <p>豆瓣评分：{{ item.rating.average }}</p>
+                <p><span v-for="obj in item.genres" :key="obj" class="tag">{{ obj }}</span></p>
+              </div>
+            </a>
+          </li>
+        </ul>
 ```
 
 
@@ -569,17 +596,17 @@ computed: {
 ```
 
 ```js
-router-link :to="{path:'/detail/'+item.id}"
+  <router-link :to="`/detail/${item.id}`">
 ```
 
 第二步：准备数据
 
 ```js
 state: {
-    // 标题
-    title: '',
-    // 详情
-    item: null
+    // 存放公共数据的地方
+    title: '', // 当前的标题
+    list: [], // 当前的电影列表
+    detail: null // detial表示是详情数据
   },
 ```
 
@@ -587,7 +614,7 @@ state: {
 
 ```js
 mutations: {
-    // payload = {title,item}  约定数据格式
+    // 专门来更新 detail数据和标题
     updateDetail (state, payload) {
       state.title = payload.title
       state.detail = payload.detail
@@ -598,18 +625,18 @@ mutations: {
 第四步：获取数据去修改数据的函数
 
 ```js
- actions: {
-    // 获取数据 详情
-    getDetail (context, id) {
-      jsonp(`http://api.douban.com/v2/movie/subject/:${id}`, function (error, data) {
-        if (error) return false
-        context.commit('updateDetail', {
+    // 定义一个action 来获取详情数据
+    getDetail (store, id) {
+      //  请求数据
+      jsonp(`http://api.douban.com/v2/movie/subject/${id}?apikey=0df993c66c0c636e29ecbb5344252a4a`, function (err, data) {
+        if (err) return false
+        console.log(data)
+        store.commit('updateDetail', {
           title: data.title,
-          detail: data
+          detail: data // 将整个的data作为载荷数据传递过去
         })
       })
     }
-  }
 ```
 
 第五步：在组件使用数据
@@ -623,32 +650,44 @@ computed: {
 第六步：在组件初始化获取数据
 
 ```js
-created () {
-    this.getItemData(this.$route.params.id)
+<template>
+  <div class="item" v-if="detail">
+        <img :src="`https://images.weserv.nl/?url=${detail.images.large}`" alt="">
+        <div>
+          <p>豆瓣评分：{{ detail.rating.average }}</p>
+          <p>产地：{{ detail.countries[0] }}</p>
+          <p><span v-for="item in detail.genres" class="tag" :key="item">{{ item }}</span></p>
+          <p>{{ detail.summary }}</p>
+        </div>
+      </div>
+</template>
+
+<script>
+import { mapState } from 'vuex'
+export default {
+  created () {
+    //  调用action
+    this.$store.dispatch('getDetail', this.$route.params.id)
   },
+  computed: {
+    ...mapState(['detail'])
+  }
+}
+</script>
+
+<style>
+
+</style>
+
 ```
 
-```js
-  methods: {
-    ...mapActions(['getDetail'])
-  }
-```
+
 
 第七步：渲染页面
 
 ![1568003580317](docs/media/1568003580317.png)
 
-```html
-<div class="item" v-if="item">
-    <img :src="'https://images.weserv.nl?url='+item.images.large" alt="">
-    <div>
-      <p>豆瓣评分：{{item.rating.average}}</p>
-      <p>产地：{{item.countries[0]}}</p>
-      <p><span v-for="(item,i) in item.genres" :key="i" class="tag">{{item}}</span></p>
-      <p>{{item.summary}}</p>
-    </div>
-  </div>
-```
+
 
 处理：空数据报错问题
 

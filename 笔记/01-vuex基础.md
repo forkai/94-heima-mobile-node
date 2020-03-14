@@ -1,5 +1,9 @@
 ## vuex基础-介绍
 
+props /$emit /eventBus
+
+ref => 获取一个组件实例对象 , 可以调用该组件的方法 也就可以传值
+
 ​	Vuex 是一个专为 Vue.js 应用程序开发的**状态管理模式**。它采用**`集中式`**存储管理应用的所有组件的状态，并以相应的规则保证状态以一种**`可预测`**的方式发生变化。
 
 - vuex是采用集中式管理组件依赖的共享数据的一个工具，可以解决不同组件数据共享问题。
@@ -8,13 +12,27 @@
 
 <font color="red">看图结论：</font>
 
-* 修改 公共状态 **`state`**   => 只能通过 **`mutations `**(集中式修改状态对象)  **`actions`**(异步获取数据)
-* 只有通过mutaions方法改的数据才叫响应式数据  => 数据变化  => 视图更新 (组件重新渲染)
-* mutations => 里面 只能写 **`同步代码`**   => 不允许做异步请求  => 如果想做异步请求 => 去action中做异步
+> 所有的公共状态修改 必须通过谁  ?  **`mutations`** , 这是vuex设计的规范和原则
 
-- state 管理数据，管理的数据是响应式的，当数据改变时驱动视图更新。
-- mutations 更新数据，state中的数据只能使用mutations去改变数据。
-- actions 请求数据，响应成功后把数据提交给mutations
+而且 mutations的中 修改状态方法 必须是 **`同步代码`** 
+
+由于mutaition只能 写同步代码, 所以 提供一个action  负责 异步的处理, action获取的异步的结果 可以 提交(commit) 给mutation
+
+> 组件中的状态 是有 state决定, state变化 , 组件更新
+
+state决定 组件的显示和渲染
+
+> state的更改只能由 mutations 决定, 只能通过mutations来修改状态,别的方式一律不行
+>
+> 别的方式即使你把数据改了 ,视图也不会更新
+
+mutations只能是同步代码,也就意味着 不能写 定时器,异步请求 
+
+> mutations 中的一次更新 就要对应一个状态, 相当于当前状态的**`快照`**
+
+那么异步请求放在哪 ?
+
+> 异步请求放在了 actions中, 这里面可以进行异步请求, 请求完的结果,必须通过 mutations来修改
 
 ![1568012229383](docs/media/1568012229383.png)
 
@@ -22,10 +40,13 @@
 
 ## vuex基础-初始化功能
 
-* webpack-dev-server  => 启动一个本地服务  => 打的文件 => 内存中
-* webpack => 打包  => 物理打包 => 打成真正的文件
-* vuex是一个插件  => 但是只能给vuejs用
-* vue-router => 路由插件
+> 建立一个新的脚手架项目, 在项目中应用vuex
+
+```bash
+$ vue create vuexdemo
+```
+
+> 开始vuex的初始化建立
 
 初始化：
 
@@ -50,7 +71,9 @@ new Vue({
 
 ## vuex基础-state
 
-- 管理数据
+- 管理数据, 管理的公共状态数据
+
+> 如果你有一个公共状态数据, 你只需要定义在 state对象中
 
 ```js
 // 初始化vuex对象
@@ -61,6 +84,8 @@ const store = new vuex.Store({
   }
 })
 ```
+
+> 组件中可以使用  this.$store 获取到  vuex中的store对象实例
 
 在组件获取state的数据：原始用法插值表达式
 
@@ -88,6 +113,8 @@ const store = new vuex.Store({
 
 ## vuex基础-mapState
 
+> mapState是辅助函数, 帮助我们把store中的数据映射到 组件的计算属性中, 它属于一种 方便用法
+
 - 把vuex中的state数据映射到组件的计算属性中。
 - **`辅助函数`**，生成计算属性。
 
@@ -100,21 +127,14 @@ import { mapState } from 'vuex'
 1. 使用：mapState(对象)  => mapState => 返回一个对象
 
 ```JS
-  // 使用 mapState 生成计算属性
-  computed: mapState({
-    // 1. 最原始写法 state vuex中的状态数据
-    // count: function (state) {
-    //   return state.count
-    // },
-    // 2. 简写
-    // count: state => state.count
-    // 3. state字段名称
-    count: 'count',
-    // 4. 结合使用当前组件的数据  必须申明成普通函数
-    myMsg (state) {
-      return this.msg + state.count
-    }
+  computed:mapState({
+    //   key:value
+    // key 是计算属性的key value有两种形式 字符串 /函数
+    count2: 'count'  // 表示计算属性中有一个count名 来源于 store中的state.count
   })
+
+  <p>mapState:{{ count2 }}</p>
+
 ```
 
 2. 使用：mapState(数组)
@@ -127,49 +147,68 @@ computed: mapState(['count'])
 
 3. 如果组件自己有计算属性，state的字段映射成计算属性
 
+这种形式 不影响计算属性自己定义 属性 
+
+> 这种形式最为常见
+
 ```js
-// 如果组件自己有计算属性，state的字段映射成计算属性
-  computed: {
-    myMsg () {
-      return this.msg + '自己计算属性'
-    },
-    ...mapState(['count'])
-  }
+   computed: {
+      ...mapState(['count','name']),
+   }
 ```
 
 
 
 ## vuex基础-mutations
 
+> 组件数据来源于state, 但是修改state必须通过mutations
+
 - 修改数据
+
+> mutations是一个对象, 对象中存放修改state的方法
+>
+> payload 载荷 传输的意思 传递参数的对象 可以在任何提交里 放入载荷数据
+
+```js
+mutations: {
+    // state就是当前 的状态 对象state
+    自定义方法(state, payload) {
+        
+    }
+}
+```
+
+> 调用mutations的方法 ? 
+
+``` js
+this.$store.commit(mutations方法名, payload) // 第一个参数是方法名 第二个参数是载荷对象(可不传)
+```
+
+> 案例
 
 声明：
 
 ```js
-  mutations: {
-    //  所有的数据修改都应该通过 mutations进行 =>  key(修改的方法名称):value(function(更新函数))
-    // payload => 载荷 (运输数据) => 参数 => 可以是任何值  但是一般是 对象  => { 若干参数 }
-    addCount (state,payload) {
-      // 默认第一个参数是state
-      // 对数据进行 加
-      state.count += payload.num // 每次自增 传入的数据
-      //  state.count++ // 自增1
-    },
-    cutCount (state, payload) {
-      state.count-= payload.num // 自减传入的数据
+// 修改公共状态的方法 只能是同步代码
+  mutations:{
+    // add方法 是更改 state的方法
+    // state是当前的state对象, payload是 传输的参数对象
+    updateCount (state, payload) {
+      // 直接对于state中的数据进行修改
+       state.count += payload.step  // 每次加传过来的步长
     }
-  }
+  },
 ```
 
 调用：
 
 ```js
-methods:{
-    add () {
-      // but这里 能不能直接调用到 store的mutations呢?
-      this.$store.commit("addCount", { num: 10 })  // 提交 载荷到mutations
-    }
-  }
+add () {
+        // 怎么修改公共状态的数据呢 ? 
+        // this.$store.commit(mutations方法名, payload) // 第一个参数是方法名 第二个参数是载荷对象(可不传)
+        // 载荷想传什么传什么
+        this.$store.commit('updateCount', { step: 5 })
+      }
 ```
 
 * 修改state 必须通过 **`mutations`**

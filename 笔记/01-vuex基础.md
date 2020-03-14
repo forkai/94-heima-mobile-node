@@ -220,6 +220,8 @@ add () {
 - 把vuex中的mutations的函数映射到组件的methods中
 - 通俗：通过mapMutations函数可以生成methods中函数
 
+语法:   mapMutations([ '方法名' ]) 
+
 ```js
   methods:{
     add () {
@@ -236,43 +238,56 @@ add () {
 
 ## vuex基础-actions
 
+> state 状态 mutation(更改状态,同步) actions(异步获取数据)
+
 - 异步获取数据
 
-定义：
+> actions对象中 可以定义 action方法 
 
 ```js
 actions: {
-    // context 官方运行上下文   获取当前的vuex实例
-    getData (context) {
-      // 模拟获取数据的耗时
-      setTimeout(() => {
-        const data = { num: 8888 }
-        // 获取后台的数据成功后
-        // 通过mutations去修改数据
-        context.commit('increment', data)
-      }, 1000)
-    },
-    // 带传参 params = {num:9999}
-    getDataByParams (context, params) {
-      // 模拟获取数据的耗时
-      setTimeout(() => {
-        const data = { num: 8888 }
-        // 获取后台的数据成功后
-        // 通过mutations去修改数据
-        context.commit('increment', data)
-      }, 1000)
+    // store实际上就是 $store对应实例对象  store.state (取状态) store.commit() // 提交修改
+    // params是传递过来的参数 可传可不传
+    自定义方法(store, params) {}
+}
+```
+
+代码
+
+```js
+  // 异步数据获取方式 想要更改state必须通过mutaitons
+  actions:{
+    // 获取数据的action 异步的 setTimeout /setInterval
+    // store就是 当前store实例对象 store.state 获取  store.commit() 
+    getCount (store) {
+      setTimeout(function(){
+          // 生成一个值 加到state中的count上
+          store.commit('updateCount', {
+            step: 3
+          })
+      }, 2000)
     }
   }
 ```
 
-使用：
+> 异步的请求必须放在 action中,  至于同步的话 放在 mutation或者action都可以
+
+调用 
 
 ```js
-getData () {
-    // 发请求获取数据
-    this.$store.dispatch('getData')
-    this.$store.dispatch('getDataByParams', { num: 9999 })
-},
+ this.$store.dispatch("getCount")
+```
+
+this.$store.commit()  // 提交到 mutation修改
+
+this.$store.dispatch()  // 调用action
+
+```js
+  this.$store.dispatch("getCount", 100)  // 传参
+  this.$store.dispatch("getCount")  // 不传参
+
+// 后面100的位置 可以传各种类型 对象/数组/数值
+
 ```
 
 
@@ -281,31 +296,33 @@ getData () {
 
 * mapState(把数据给计算属性), mapMutations(把方法给methods), mapActions(把方法给 methods)
 
-- mapAction s辅助函数，把actions中的函数映射组件methods中
+- mapActions辅助函数，把actions中的函数映射组件methods中
 - 通俗：通过mapActions函数可以生成methods中函数
 
 ```js
-// 在methods中申明了一个函数getCount，执行的代码是：this.$store.dispatch('getData')
-    ...mapActions({ getCount: 'getData' }),
-    // 在methods中申明了一个函数getDataByParams({ num: `9999 })，执行的代码是：this.$store.dispatch('getDataByParams', { num: 9999 })
-    ...mapActions(['getDataByParams']),
+ ...mapActions(['getCount'])  // 此时 组件中就有了一个getCount方法 对应 store中action中的getCount
+
 ```
 
+组件
+
+state  => 决定组件的样式 
+
+mutations => 必须通过 mutation改变state, mutations必须是同步代码  => this.$store.commit()
+
+actions => 异步请求 异步操作 提交mutation 来修改state => this.$store.dispatch()  => action
+
+辅助函数
+
+mapState  => store中的数据映射到 组件计算属性上
+
+mapMutations => 把mutations方法映射到 组件的methods方法中
+
+mapActions => action方法映射到 methods方法中
+
+辅助函数是可以不用的,不用的话 就用原始的方式调用
 
 
-* vuex => **`管理共享状态的框架`**
-
-* **`state`**  =>公共数据
-
-* **`mutations`** => 修改数据  => 必须是同步 ,如果有异步 放在actions中
-
-* **`actions`** => 异步获取数据
-
-  actions => 获取数据  =>  方法(context/store)  =>store.commit   => mutations (更新数据) => state => render => 组件
-
-  组件  =>   action =>  this.$store.dispatch(调用action方法)  => 可以传参吗?  可以!!!!
-
-  action方法  => 第一个参数 是 context => store的运行实例 => this.$store, 第二个参数开始 就是传递的参数
 
 ## vuex案例-豆瓣接口
 
